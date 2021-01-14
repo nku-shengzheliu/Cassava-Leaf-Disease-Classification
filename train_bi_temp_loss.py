@@ -147,13 +147,11 @@ if __name__ == '__main__':
                                           transforms.Normalize(mean=(0.42984136, 0.49624753, 0.3129598), std=(0.21417203, 0.21910103, 0.19542212))
                                           ])
 
-    train_dataset = Single_Dataset(image_root=r'./cassava-leaf-disease-classification/train_images_resize',
+    train_dataset = Single_Dataset(image_root=r'/home/ubuntu6/lsz/dataset/cassava-leaf-disease-classification/train_images_resize',
                                    txt_path= './train.txt',
                                    is_train=True,
                                    transform = train_transform
                                    )
-    prob_list = open('./prob.txt').readlines()
-    prob_list = list(map(lambda x:float(x.strip('\n')),prob_list))
 
     training_loader = torch.utils.data.DataLoader(train_dataset,
                                                   batch_size=args.b // world_size,
@@ -168,7 +166,7 @@ if __name__ == '__main__':
                                          transforms.Normalize(mean=(0.42984136, 0.49624753, 0.3129598), std=(0.21417203, 0.21910103, 0.19542212))
                                          ])
     test_dataset = Single_Dataset(
-                                    image_root=r'./cassava-leaf-disease-classification/train_images_resize',
+                                    image_root=r'/home/ubuntu6/lsz/dataset/cassava-leaf-disease-classification/train_images_resize',
                                     txt_path='./val.txt',
                                     is_train=False,
                                     transform=test_transform
@@ -181,7 +179,7 @@ if __name__ == '__main__':
 
     #loss_function = nn.CrossEntropyLoss()
     # loss_function = label_smoothing.LabelSmoothSoftmaxCEV1(lb_smooth=0.1)
-    loss_function = bi_tempered_loss.bi_tempered_logistic_loss()
+    loss_function = bi_tempered_loss.bi_tempered_logistic_loss(t1=1.0, t2=1.0, label_smoothing=0.1)
 
     # fine-tuning
     params = []
