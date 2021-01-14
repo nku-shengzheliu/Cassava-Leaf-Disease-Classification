@@ -8,3 +8,4 @@
 
 ### 1.14 可以改进的方向
 1. 将backbone中的maxpool改为[softpool](https://github.com/alexandrosstergiou/SoftPool)
+2. 尝试[SAM Optimizer](https://github.com/davda54/sam)
