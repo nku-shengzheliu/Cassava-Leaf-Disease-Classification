@@ -74,7 +74,8 @@ def tempered_softmax(activations, t, num_iters=5):
     else:
         normalization_constants = compute_normalization(activations, t, num_iters)
 
-    return exp_t(activations - normalization_constants, t)
+    repeat_normalization_constants = normalization_constants.repeat(activations.size(1)).view(activations.size(1), -1).transpose(1, 0)
+    return exp_t(activations - repeat_normalization_constants, t)
 
 class bi_tempered_logistic_loss(nn.Module):
     def __init__(self, t1=1.0, t2=1.0, label_smoothing=0.1, num_iters=5):
@@ -94,21 +95,46 @@ class bi_tempered_logistic_loss(nn.Module):
     def forward(self, logits, labels):
         """
         Inputs:
-        logits: A multi-dimensional tensor with last dimension `num_classes`. tensor of shape (N, C, H, W)
-        label: A tensor with shape and dtype as activations. tensor of shape(N, H, W)
+        logits: A multi-dimensional tensor with last dimension `num_classes`. tensor of shape (N, C)
+        label: A tensor with shape and dtype as activations. tensor of shape(N)
 
         Returns:
         A loss tensor.
         """
-        if self.label_smoothing > 0.0:
-            num_classes = labels.shape[-1]
-            labels = (1 - num_classes / (num_classes - 1) * self.label_smoothing) * labels + self.label_smoothing / (num_classes - 1)
+        logits = logits.float()  # use fp32 to avoid nan
+        with torch.no_grad():
+            num_classes = logits.size(1)
+            label = labels.clone().detach()
+            lb_pos, lb_neg = 1. - self.label_smoothing, self.label_smoothing / num_classes
+            lb_one_hot = torch.empty_like(logits).fill_(
+                lb_neg).scatter_(1, label.unsqueeze(1), lb_pos).detach()
 
-        logits = logits.float()  # use fp32 to avoid nan\
+        # if self.label_smoothing > 0.0:
+        #     num_classes = logits.shape[-1]
+        #     labels = (1 - num_classes / (num_classes - 1) * self.label_smoothing) * labels + self.label_smoothing / (num_classes - 1)
+
         probabilities = tempered_softmax(logits, self.t2, self.num_iters)
 
-        temp1 = (log_t(labels + 1e-10, self.t1) - log_t(probabilities, self.t1)) * labels
-        temp2 = (1 / (2 - self.t1)) * (torch.pow(labels, 2 - self.t1) - torch.pow(probabilities, 2 - self.t1))
+        temp1 = (log_t(lb_one_hot + 1e-10, self.t1) - log_t(probabilities, self.t1)) * lb_one_hot
+        temp2 = (1 / (2 - self.t1)) * (torch.pow(lb_one_hot, 2 - self.t1) - torch.pow(probabilities, 2 - self.t1))
         loss_values = temp1 - temp2
 
-        return torch.sum(loss_values, dim=-1)
+        loss = loss_values.sum() / logits.size(0)
+
+        # return torch.sum(loss_values, dim=-1)
+        return loss
+
+if __name__ == "__main__":
+    device = "cuda:0"
+
+    activations = torch.FloatTensor([[-0.5, 0.1, 2.0]]).to(device)
+    labels = torch.FloatTensor([[0.2, 0.5, 0.3]]).to(device)
+
+    loss_function1 = bi_tempered_logistic_loss(t1=1.0, t2=1.0, label_smoothing=0.1)
+    loss_function2 = bi_tempered_logistic_loss(t1=0.7, t2=1.3, label_smoothing=0.1)
+    # The standard logistic loss is obtained when t1 = t2 = 1.0
+    loss = loss_function1(activations, labels)
+    print("Loss, t1=1.0, t2=1.0: ", loss)
+
+    loss = loss_function2(activations, labels)
+    print("Loss, t1=0.7, t2=1.3: ", loss)
