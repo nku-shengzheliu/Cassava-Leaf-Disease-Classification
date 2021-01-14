@@ -7,7 +7,7 @@
 * 图像数量(Number of images)：21397
 * 分辨率(image size)：800*600
 * 类别分布(class distribution):
-![dataset](./dataset.png)
+![dataset](https://github.com/nku-shengzheliu/Cassava-Leaf-Disease-Classification/blob/master/dataset.PNG)
 
 ### 2021.1.13 Methods for future improvement 可以改进的方向 
 1. Bi-tempered-logistic-loss (Description found [here](https://ai.googleblog.com/2019/08/bi-tempered-logistic-loss-for-training.html)).
