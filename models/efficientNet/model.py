@@ -400,8 +400,19 @@ if __name__ == '__main__':
     if freeze_bn:
         for m in net.modules():
             if isinstance(m, nn.BatchNorm2d):
-                print(m)
+                # print(m)
                 m.eval()
                 if freeze_bn_affine:
                     m.weight.requires_grad = False
                     m.bias.requires_grad = False
+    img = torch.randn([1, 3, 256, 256])
+    img.requires_grad = True
+    label = torch.tensor([0])
+    loss_function = nn.CrossEntropyLoss()
+    out = net(img)
+    loss = loss_function(out, label)
+    loss.backward()
+    # 验证冻结bn后梯度是否可以回传
+    for name, parms in net.named_parameters():
+        print('-->name:', name, '-->grad_requirs:', parms.requires_grad, \
+              ' -->grad_value:', parms.grad)
