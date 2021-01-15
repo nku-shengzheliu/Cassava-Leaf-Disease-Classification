@@ -10,7 +10,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from .utils import (
+from models.efficientNet.utils import (
     round_filters,
     round_repeats,
     drop_connect,
@@ -388,7 +388,20 @@ class EfficientNet(nn.Module):
             out_channels = round_filters(32, self._global_params)
             self._conv_stem = Conv2d(in_channels, out_channels, kernel_size=3, stride=2, bias=False)
 
-# net = EfficientNet.from_pretrained('efficientnet-b7',in_channels=6,num_classes=3)
-# print()
-
-
+if __name__ == '__main__':
+    net = EfficientNet.from_pretrained('efficientnet-b4',in_channels=3,num_classes=5)
+    print(net)
+    freeze_bn = True
+    freeze_bn_affine = True
+    if freeze_bn:
+        print("Freezing Mean/Var of BatchNorm2D.")
+        if freeze_bn_affine:
+            print("Freezing Weight/Bias of BatchNorm2D.")
+    if freeze_bn:
+        for m in net.modules():
+            if isinstance(m, nn.BatchNorm2d):
+                print(m)
+                m.eval()
+                if freeze_bn_affine:
+                    m.weight.requires_grad = False
+                    m.bias.requires_grad = False

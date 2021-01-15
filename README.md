@@ -26,5 +26,5 @@
 | Cross Entropy loss | warmup, imgaug | - | - | 0.872 |
 | Focal loss | warmup, imgaug | - | - | 0.882 |
 | Cross Entropy loss |label smooth, warmup, imgaug |[code](https://github.com/nku-shengzheliu/Cassava-Leaf-Disease-Classification/blob/master/train.py) | - | 0.891 |
-| [Bi tempered logistic loss](https://ai.googleblog.com/2019/08/bi-tempered-logistic-loss-for-training.html)  |label smooth, warmup, imgaug| [code](https://github.com/nku-shengzheliu/Cassava-Leaf-Disease-Classification/blob/master/train_bi_temp_loss.py) | - |-|
+| [Bi tempered logistic loss](https://ai.googleblog.com/2019/08/bi-tempered-logistic-loss-for-training.html)  |label smooth, warmup, imgaug| [code](https://github.com/nku-shengzheliu/Cassava-Leaf-Disease-Classification/blob/master/train_bi_temp_loss.py) | 0.8851 |0.890|
 | - | - | - | - | - |

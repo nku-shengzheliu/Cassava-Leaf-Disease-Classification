@@ -153,8 +153,6 @@ if __name__ == '__main__':
                                    is_train=True,
                                    transform = train_transform
                                    )
-    prob_list = open('./prob.txt').readlines()
-    prob_list = list(map(lambda x:float(x.strip('\n')),prob_list))
 
     training_loader = torch.utils.data.DataLoader(train_dataset,
                                                   batch_size=args.b // world_size,

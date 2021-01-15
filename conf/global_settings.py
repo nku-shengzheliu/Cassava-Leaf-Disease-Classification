@@ -37,7 +37,7 @@ GAMMA = 0.1
 
 #total training epoches
 EPOCH = 100
-MILESTONES = [10,20,30,60,75]
+MILESTONES = [15,30,60,75]
 
 #initial learning rate
 #INIT_LR = 0.1
@@ -49,7 +49,7 @@ TIME_NOW = datetime.now().isoformat()[:10]
 LOG_DIR = 'logs'
 
 #save weights file per SAVE_EPOCH epoch
-SAVE_EPOCH = 1
+SAVE_EPOCH = 10
 
 # GPU
 GPU = '0,1'

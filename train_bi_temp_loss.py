@@ -44,6 +44,22 @@ def train(epoch):
     sampleNum = 0
     torch.cuda.empty_cache()
     net.train()
+    # Freeze BN
+    freeze_bn = True
+    freeze_bn_affine = True
+    if freeze_bn:
+        print("Freezing Mean/Var of BatchNorm2D.")
+        if freeze_bn_affine:
+            print("Freezing Weight/Bias of BatchNorm2D.")
+    if freeze_bn:
+        for m in net.modules():
+            if isinstance(m, nn.BatchNorm2d):
+                print(m)
+                m.eval()
+                if freeze_bn_affine:
+                    m.weight.requires_grad = False
+                    m.bias.requires_grad = False
+
     if global_rank == 0:
         logging.info('Epoch {:03d}, Learning Rate {:g}'.format(epoch + 1, optimizer.param_groups[0]['lr']))
     for batch_index, (images, labels) in enumerate(training_loader):
