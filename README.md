@@ -25,7 +25,7 @@
 - [x] Bi-tempered-logistic-loss (Description found [here](https://ai.googleblog.com/2019/08/bi-tempered-logistic-loss-for-training.html)).
 - [x] Frozen BN.
 - [ ] Training with early stopping criterion.
-- [ ] N-Fold CV
+- [x] N-Fold CV
 
 ### 2021.1.14 Methods for future improvement 可以改进的方向 
 - [ ] 将backbone中的maxpool改为[softpool](https://github.com/alexandrosstergiou/SoftPool)
@@ -33,5 +33,7 @@
 
 ### 2021.1.15 Methods for future improvement 可以改进的方向 
 - [ ] use label smooth and cutmix may get score of [0.903](https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/209065)
-- [ ] use 5-fold CV
+- [x] use 5-fold CV
 
+### 2021.1.16 Methods for future improvement 可以改进的方向 
+- [ ] CVPR 2019 Cassava Disease Classification挑战赛: [here](https://blog.csdn.net/fendouaini/article/details/93690986)
