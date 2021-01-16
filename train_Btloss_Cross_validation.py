@@ -49,6 +49,7 @@ def get_model():
 def get_dataloader(data_train, data_valid):
     train_transform = transforms.Compose([
         transforms.RandomCrop((480, 480)),
+        # transforms.RandomRotation((-15,15)),
         transforms.ToTensor(),
         transforms.Normalize(mean=(0.42984136, 0.49624753, 0.3129598), std=(0.21417203, 0.21910103, 0.19542212))
     ])
@@ -62,8 +63,8 @@ def get_dataloader(data_train, data_valid):
                                                   batch_size=args.b,
                                                   shuffle=True,
                                                   # sampler=train_sampler,
-                                                  num_workers=args.workers,
-                                                  pin_memory=True
+                                                  num_workers=args.workers
+                                                  # pin_memory=True
                                                   )
     val_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -80,26 +81,22 @@ def get_dataloader(data_train, data_valid):
                                               shuffle=False,
                                               num_workers=args.workers
                                               )
-    return train_loader, val_loader
+    return train_loader, val_loader, train_dataset, val_dataset
 
-def get_kfold_data(k, i, train_list):
-    # 返回第 i+1 折 (i = 0 -> k-1) 交叉验证时所需要的训练和验证数据，X_train为训练集，X_valid为验证集
-    fold_size = len(train_list) // k  # 每份的个数:数据总条数/折数（组数）
-
-    val_start = i * fold_size
-    if i != k - 1:
-        val_end = (i + 1) * fold_size
-        data_valid = train_list[val_start:val_end]
-        data_train = train_list[0:val_start] + train_list[val_end:]
-    else:  # 若是最后一折交叉验证
-        data_valid = train_list[val_start:]  # 若不能整除，将多的case放在最后一折里
-        data_train = train_list[0:val_start]
-
+def get_kfold_data(i):
+    data_train = []
+    data_valid = []
+    csv_file = csv.reader(open('5_fold/train_'+str(i)+'.csv', 'r'))
+    for data in csv_file:
+        data_train.append(data)
+    csv_file = csv.reader(open('5_fold/val_' + str(i) + '.csv', 'r'))
+    for data in csv_file:
+        data_valid.append(data)
     return data_train, data_valid
 
 def traink(net, data_train, data_valid, args, current_k):
     # make dataloader
-    train_loader, val_loader = get_dataloader(data_train, data_valid)
+    train_loader, val_loader, _, _ = get_dataloader(data_train, data_valid)
 
     # fine-tuning
     params = []
@@ -142,9 +139,10 @@ def traink(net, data_train, data_valid, args, current_k):
     logging.info('Network weights save to {}'.format(checkpoint_path))
     logging.info('Start training: Total epochs: {}, Batch size: {}, Training size: {}, Validation size: {}'.
                  format(settings_cv.EPOCH, args.b, len(data_train),
-                        len(settings_cv)))  # len(validate_dataset)))
+                        len(train_loader)))  # len(validate_dataset)))
     logging.info('')
 
+    best_acc = 0
     losses = []
     val_losses = []
     train_acc = []
@@ -160,7 +158,7 @@ def traink(net, data_train, data_valid, args, current_k):
         if freeze_bn:
             for m in net.modules():
                 if isinstance(m, nn.BatchNorm2d):
-                    print(m)
+                    # print(m)
                     m.eval()
                     if freeze_bn_affine:
                         m.weight.requires_grad = False
@@ -187,12 +185,12 @@ def traink(net, data_train, data_valid, args, current_k):
             correct += preds.eq(labels).sum()
             sampleNum += outputs.size()[0]
 
-            if (i + 1) % 10 == 0:
-                # 每10个batches打印一次loss
+            if (batch_index + 1) % 50 == 0:
+                # 每50个batches打印一次loss
                 print('Epoch : %d/%d, Iter : %d/%d,  Loss: %.4f  LR: %.6f' % (epoch + 1, settings_cv.EPOCH,
-                                                                    i + 1, iter_per_epoch // args.b,
+                                                                              batch_index + 1, iter_per_epoch,
                                                                     loss.item(),optimizer.param_groups[0]['lr']))
-        accuracy = correct.float() / sampleNum
+        accuracy = 100. * correct.float() / sampleNum
         print('Epoch: {}, Loss: {:.5f}, Training set accuracy: {}/{} ({:.4f}%)'.format(
             epoch + 1, loss.item(), correct, sampleNum, accuracy))
         train_acc.append(accuracy)
@@ -229,6 +227,7 @@ def traink(net, data_train, data_valid, args, current_k):
         if not epoch % settings_cv.SAVE_EPOCH:
             torch.save(net.module.state_dict(), checkpoint_path.format(net=args.net, epoch=epoch, type='regular'))
 
+
     return losses, val_losses, train_acc, val_acc
 
 
@@ -238,11 +237,11 @@ if __name__ == "__main__":
     parser.add_argument('-net', type=str, default='efficientnet-b4', help='net type')
     parser.add_argument('-gpu', type=bool, default=True, help='use gpu or not')
     parser.add_argument('-k', type=int, default=5, help='k-fold cross validation')
-    parser.add_argument('-w', type=int, default=2, help='number of workers for dataloader')
     parser.add_argument('-b', type=int, default=16, help='batch size for dataloader')
     parser.add_argument('-s', type=bool, default=True, help='whether shuffle the dataset')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.02, help='initial learning rate')
+    parser.add_argument('-fold_index', type=int, required=True, help='fold index')
     parser.add_argument('-workers', type=int, default=8, help='number of Dataloader workers')
     parser.add_argument('-logname', type=str, default="train_btloss_cv.log", help='log name')
     parser.add_argument('-cutmix_beta', type=float, default=0.3)
@@ -250,32 +249,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 加载全部训练文件列表
-    train_list = []
-    csv_file = csv.reader(open('train.csv','r'))
-    for train_data in csv_file:
-        train_list.append(train_data)
-    random.shuffle(train_list)  # 打乱数据列表
+    # train_list = []
+    # csv_file = csv.reader(open('train.csv','r'))
+    # for train_data in csv_file:
+    #     train_list.append(train_data)
+    # random.shuffle(train_list)  # 打乱数据列表
 
     # k折交叉验证
-    train_loss_sum, valid_loss_sum = 0, 0
-    train_acc_sum, valid_acc_sum = 0, 0
-    for i in range(args.k):
-        print('*' * 25, 'The', i + 1, 'fold', '*' * 25)
-        data_train, data_valid = get_kfold_data(args.k, i, train_list)  # 获取k折交叉验证的训练和验证数据
-        net = get_model()  # 实例化模型（某已经定义好的模型）
+    # train_loss_sum, valid_loss_sum = 0, 0
+    # train_acc_sum, valid_acc_sum = 0, 0
+    #for i in range(args.k):
+    i = args.fold_index
+    print('*' * 25, 'The', i + 1, 'fold', '*' * 25)
+    data_train, data_valid = get_kfold_data(i)  # 获取k折交叉验证的训练和验证数据
+    net = get_model()  # 实例化模型（某已经定义好的模型）
 
-        # 每份数据进行训练
-        train_loss, val_loss, train_acc, val_acc = traink(net, data_train, data_valid, args, i)
+    # 每份数据进行训练
+    train_loss, val_loss, train_acc, val_acc = traink(net, data_train, data_valid, args, i)
 
-        print('train_loss:{:.5f}, train_acc:{:.3f}%'.format(train_loss[-1], train_acc[-1]))
-        print('valid loss:{:.5f}, valid_acc:{:.3f}%\n'.format(val_loss[-1], val_acc[-1]))
+    print('train_loss:{:.5f}, train_acc:{:.3f}%'.format(train_loss[-1], train_acc[-1]))
+    print('valid loss:{:.5f}, valid_acc:{:.3f}%\n'.format(val_loss[-1], val_acc[-1]))
 
-        train_loss_sum += train_loss[-1]
-        valid_loss_sum += val_loss[-1]
-        train_acc_sum += train_acc[-1]
-        valid_acc_sum += val_acc[-1]
-
-    print('\n', '#' * 10, 'The final k-fold cross validation results', '#' * 10)
-
-    print('average train loss:{:.4f}, average train accuracy:{:.3f}%'.format(train_loss_sum / args.k, train_acc_sum / args.k))
-    print('average valid loss:{:.4f}, average valid accuracy:{:.3f}%'.format(valid_loss_sum / args.k, valid_acc_sum / args.k))
+    # train_loss_sum += train_loss[-1]
+    # valid_loss_sum += val_loss[-1]
+    # train_acc_sum += train_acc[-1]
+    # valid_acc_sum += val_acc[-1]
+    #
+    # print('\n', '#' * 10, 'The final k-fold cross validation results', '#' * 10)
+    #
+    # print('average train loss:{:.4f}, average train accuracy:{:.3f}%'.format(train_loss_sum / args.k, train_acc_sum / args.k))
+    # print('average valid loss:{:.4f}, average valid accuracy:{:.3f}%'.format(valid_loss_sum / args.k, valid_acc_sum / args.k))
