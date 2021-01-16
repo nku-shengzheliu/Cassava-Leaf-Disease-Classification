@@ -1,5 +1,4 @@
 """ configurations for this project
-
 """
 from datetime import datetime
 
@@ -8,8 +7,8 @@ CHECKPOINT_PATH = 'checkpoint'
 GAMMA = 0.1
 
 #total training epoches
-EPOCH = 20
-MILESTONES = [15,30,60,75]
+EPOCH = 25
+MILESTONES = [10, 18]
 
 #initial learning rate
 #INIT_LR = 0.1
@@ -21,7 +20,7 @@ TIME_NOW = datetime.now().isoformat()[:10]
 LOG_DIR = 'logs'
 
 #save weights file per SAVE_EPOCH epoch
-SAVE_EPOCH = 3
+SAVE_EPOCH = 1
 
 # GPU
 GPU = '0,1'
