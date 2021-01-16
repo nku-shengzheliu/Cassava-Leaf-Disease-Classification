@@ -79,7 +79,7 @@ class CLDC_Dataset(Dataset):
 
     def __getitem__(self, index):
         image_path = os.path.join(self.image_root, self.image_list[index])
-        label = self.label_list[index]
+        label = int(self.label_list[index])
         img = Image.open(image_path).convert('RGB')
         if self.is_train:
             img = self.seq.augment_image(np.array(img))
