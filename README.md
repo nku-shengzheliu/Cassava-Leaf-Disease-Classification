@@ -1,7 +1,6 @@
 # Cassava-Leaf-Disease-Classification-NKU_428
 >This repository is used to record our code in this [competition](https://www.kaggle.com/c/cassava-leaf-disease-classification/overview)
 
-> Our team name: NKU_428
 
 ### Dataset analysis
 * 图像数量(Number of images)：21397
